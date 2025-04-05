@@ -19,12 +19,10 @@ resource "google_storage_bucket" "gcs_bucket_schema" {
   force_destroy               = true
 }
 
-resource "google_storage_object" "dag_file" {
+resource "google_storage_bucket_object" "dag_file" {
   name   = var.dag_file_name
   bucket = var.dags_bucket
   source = var.dag_file
-
-  depends_on = [module.composer]
 }
 
 data "archive_file" "source" {

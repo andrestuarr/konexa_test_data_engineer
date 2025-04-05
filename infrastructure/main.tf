@@ -20,14 +20,14 @@ module "composer" {
 }
 
 module "cloud_storage" {
-  source                = "./modules/cloud_storage"
-  bucket_name           = var.bucket_name
-  bucket_schema         = var.bucket_schema_name
-  cloud_function_bucket = var.cloud_function_bucket_name
-  region                = var.region
-  dag_file_name         = var.dag_file_name
-  dag_file              = var.dag_file
-  dags_bucket           = module.composer.composer_dags_bucket
+  source                     = "./modules/cloud_storage"
+  bucket_name                = var.bucket_name
+  bucket_schema_name         = var.bucket_schema_name
+  cloud_function_bucket_name = var.cloud_function_bucket_name
+  region                     = var.region
+  dag_file_name              = var.dag_file_name
+  dag_file                   = var.dag_file
+  dags_bucket                = module.composer.composer_dags_bucket
 }
 
 module "cloud_functions" {

@@ -25,7 +25,7 @@ resource "google_cloudfunctions2_function" "cf_activate_dag" {
 
     ingress_settings = "ALLOW_INTERNAL_ONLY"
 
-    service_account = var.service_account
+    service_account_email = var.service_account
   }
 
   event_trigger {

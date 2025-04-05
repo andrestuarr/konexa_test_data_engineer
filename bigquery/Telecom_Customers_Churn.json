@@ -1,0 +1,107 @@
+[
+    {
+      "name": "customerID", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "gender", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "SeniorCitizen", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "Partner", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "Dependents", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "tenure", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "PhoneService", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "MultipleLines", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "InternetService", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "OnlineSecurity", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "OnlineBackup", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "DeviceProtection", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "TechSupport", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "StreamingTV", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "StreamingMovies", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "Contract", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "PaperlessBilling", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "PaymentMethod", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "MonthlyCharges", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "TotalCharges", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "Churn", 
+      "type": "STRING", 
+      "mode": "NULLABLE"
+    }
+]

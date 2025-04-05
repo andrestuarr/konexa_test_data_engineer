@@ -1,0 +1,4 @@
+google-cloud-storage
+google-cloud-composer
+requests
+functions-framework

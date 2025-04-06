@@ -1,8 +1,6 @@
 from airflow import DAG
 from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator
 from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
-from airflow.providers.google.cloud.transfers.gcs import GCSToLocalOperator
-from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 from datetime import timedelta
 import os
@@ -17,20 +15,17 @@ default_args = {
 dag = DAG(
     'gcs_to_bigquery_with_transformation',
     default_args=default_args,
-    description='Carga de datos de GCS a BigQuery y transformación de datos',
+    description='Carga y transformación de datos de GCS a BigQuery',
     schedule_interval=None,
 )
 
-# Variables inyectadas vía dag_run.conf
 bucket_name = '{{ dag_run.conf["bucket_name"] }}'
 file_name = '{{ dag_run.conf["file_name"] }}'
-project_id = os.environ.get("GCP_PROJECT")
-
-# Variables para el nombre de la tabla y la tabla transformada
+project_id = '{{ dag_run.conf["project_id"] }}'
 table_name = "{{ dag_run.conf['file_name'].split('/')[-1] }}"
 transform_table_name = "{{ dag_run.conf['file_name'].split('/')[-1] }}_transform"
 
-# Step 1: Asegura que exista el dataset en BigQuery.
+# 1. Crear dataset si no existe
 create_dataset = BigQueryCreateEmptyDatasetOperator(
     task_id='ensure_exist_dataset_raw',
     dataset_id=bucket_name,
@@ -40,7 +35,7 @@ create_dataset = BigQueryCreateEmptyDatasetOperator(
     dag=dag,
 )
 
-# Step 2: Cargar datos desde GCS a BigQuery.
+# 2. Cargar CSV desde GCS a BQ
 gcs_to_bq = GCSToBigQueryOperator(
     task_id='gcs_to_bq',
     bucket=bucket_name,
@@ -56,46 +51,51 @@ gcs_to_bq = GCSToBigQueryOperator(
     dag=dag,
 )
 
-# Step 3: Descargar el archivo SQL desde GCS.
-download_sql_file = GCSToLocalOperator(
-    task_id='download_sql_file',
-    bucket_name='bucket-de-transformaciones',
-    object_name=f'transformaciones/{file_name}_query.sql',
-    local_file='/tmp/template_query.sql',
-    google_cloud_storage_conn_id='google_cloud_default',
-    dag=dag,
-)
+# 3. Transformación con SQL directamente en el DAG
+transform_query = f"""
+SELECT 
+    CAST(customerID AS STRING) AS customerID,
+    CAST(gender AS STRING) AS gender,
+    CAST(SeniorCitizen AS INT64) AS SeniorCitizen,
+    CAST(Partner AS STRING) AS Partner,
+    CAST(Dependents AS STRING) AS Dependents,
+    CAST(tenure AS INT64) AS tenure,
+    CAST(PhoneService AS STRING) AS PhoneService,
+    CAST(MultipleLines AS STRING) AS MultipleLines,
+    CAST(InternetService AS STRING) AS InternetService,
+    CAST(OnlineSecurity AS STRING) AS OnlineSecurity,
+    CAST(OnlineBackup AS STRING) AS OnlineBackup,
+    CAST(DeviceProtection AS STRING) AS DeviceProtection,
+    CAST(TechSupport AS STRING) AS TechSupport,
+    CAST(StreamingTV AS STRING) AS StreamingTV,
+    CAST(StreamingMovies AS STRING) AS StreamingMovies,
+    CAST(Contract AS STRING) AS Contract,
+    CAST(PaperlessBilling AS STRING) AS PaperlessBilling,
+    CAST(PaymentMethod AS STRING) AS PaymentMethod,
+    CAST(MonthlyCharges AS FLOAT64) AS MonthlyCharges,
+    CAST(TotalCharges AS FLOAT64) AS TotalCharges,
+    CAST(Churn AS STRING) AS Churn
+FROM 
+    `{project_id}.{bucket_name}.{table_name}`
+"""
 
-# Step 4: Leer el contenido del archivo SQL descargado.
-def read_sql_file(**kwargs):
-    with open('/tmp/template_query.sql', 'r') as f:
-        return f.read()
-
-read_sql = PythonOperator(
-    task_id='read_sql_file',
-    python_callable=read_sql_file,
-    provide_context=True,
-    dag=dag,
-)
-
-# Step 5: Ejecutar la transformación en BigQuery usando el contenido del archivo SQL.
 bq_transform = BigQueryInsertJobOperator(
     task_id='bq_transform',
     configuration={
         "query": {
-            "query": "{{ task_instance.xcom_pull(task_ids='read_sql_file') }}",
+            "query": transform_query,
             "useLegacySql": False,
             "destinationTable": {
                 "projectId": project_id,
                 "datasetId": bucket_name,
-                "tableId": transform_table_name
+                "tableId": transform_table_name,
             },
             "writeDisposition": "WRITE_TRUNCATE",
-            "createDisposition": "CREATE_IF_NEEDED"
+            "createDisposition": "CREATE_IF_NEEDED",
         }
     },
     location="US",
     dag=dag,
 )
 
-create_dataset >> gcs_to_bq >> download_sql_file >> read_sql >> bq_transform
+create_dataset >> gcs_to_bq >> bq_transform

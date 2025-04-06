@@ -7,8 +7,6 @@ on:
       - 'infrastructure/**'
       - 'cloud_functions/**'
       - 'composer/**'
-    paths-ignore:
-      - 'infrastructure/modules/cloud_storage/function.zip'
 
 jobs:
   terraform:

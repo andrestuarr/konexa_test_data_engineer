@@ -1,2 +1,3 @@
 .terraform
 .terraform.lock.hcl
+infrastructure/modules/cloud_storage/function.zip

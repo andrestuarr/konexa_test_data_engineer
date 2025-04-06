@@ -1,75 +1,121 @@
 # Konexa Test - Data Engineer
 
-Este proyecto es una solución integral para una prueba técnica de ingeniería de datos. La solución aborda tres requerimientos principales mediante una arquitectura basada en eventos:
+Este repositorio presenta una solución integral para una prueba técnica de **Ingeniería de Datos**, basada en una **arquitectura orientada a eventos** en Google Cloud Platform. La solución aborda tres requerimientos clave mediante el uso de Terraform, Cloud Functions, Composer (Airflow) y BigQuery.
 
-## 🧩 Objetivo
+---
 
-1. Procesar automáticamente un archivo cuando se carga a un bucket en GCS.
-2. Desplegar automáticamente una Cloud Function para manejar el procesamiento.
-3. Ejecutar un DAG en Cloud Composer para cargar el archivo en BigQuery y aplicar una transformación.
+## 🎯 Objetivo
+
+1. Detectar automáticamente la carga de un archivo en un bucket de GCS.
+2. Ejecutar una Cloud Function que reaccione al evento.
+3. Lanzar un DAG en Cloud Composer que importe el archivo en BigQuery y realice una transformación de datos.
 
 ---
 
 ## ⚙️ Arquitectura de la solución
 
-La solución implementa una **arquitectura orientada a eventos** que cubre las tres preguntas:
+Se implementa una **arquitectura event-driven** (basada en eventos) que automatiza completamente el procesamiento del archivo:
 
-<img src="imagenes/arquitectura.jpg" alt="Descripción" width="750">
+<img src="imagenes/arquitectura.jpg" alt="Arquitectura de la solución" width="750"/>
 
+### Flujo:
 
-1. ✅ **Subida de archivo a GCS**  
-   Dispara un evento que activa una Cloud Function.
+1. ✅ **Carga de archivo a GCS**  
+   Un archivo `.csv` es subido manual o automáticamente a un bucket de Cloud Storage, lo que genera un evento.
 
-2. 🚀 **Cloud Function (Event Trigger)**  
-   La función obtiene los metadatos del archivo y lanza un DAG en Cloud Composer con los datos del evento.
+2. 🚀 **Cloud Function (trigger por evento)**  
+   La función se activa por el evento, extrae los metadatos del archivo y lanza un DAG en Composer, pasando los parámetros necesarios.
 
-3. 📈 **DAG en Composer (Airflow)**  
-   El DAG:
-   - Asegura la existencia del dataset en BigQuery.
-   - Carga el archivo desde GCS a BigQuery.
-   - Ejecuta una transformación SQL directamente sobre los datos cargados.
+3. 📈 **DAG en Cloud Composer (Airflow)**  
+   El DAG realiza las siguientes acciones:
+   - Verifica o crea el dataset en BigQuery.
+   - Carga el archivo desde GCS a una tabla temporal en BigQuery.
+   - Aplica una transformación SQL para tipificar correctamente los datos y almacenarlos en una tabla final.
 
-
-
-   <img src="imagenes/dag.png" alt="Descripción" width="750">
+<img src="imagenes/dag.png" alt="Diagrama del DAG ejecutado exitosamente" width="750"/>
 
 ---
 
 ## 📁 Estructura del proyecto
 
+```plaintext
+├── cloud_functions/            # Código de la Cloud Function
+│   └── main.py
+|   └── requirements.txt
+│
+├── composer/                   # DAG de Airflow
+│   └── dag_process.py
+│
+├── infrastructure/             # Infraestructura como código (Terraform)
+│   ├── modules
+│   │    ├── cloud_functions
+│   │    ├── cloud_storage
+│   │    ├── composer
+│   │    └── iam
+|   ├── main.tf
+│   ├── variables.tf
+│   ├── providers.tf
+│   └── outputs.tf
+│
+└── imagenes/                   # Diagramas explicativos
+    ├── arquitectura.jpg
+    └── dag.png
+```
 
 
 ---
 
-## 🛠️ Tecnologías usadas
+## 🛠️ Tecnologías utilizadas
 
 - **Google Cloud Platform (GCP)**  
-  - Cloud Functions  
   - Cloud Storage  
+  - Cloud Functions  
+  - Cloud Composer (Apache Airflow)  
   - BigQuery  
-  - Cloud Composer (Airflow)
 
-- **Terraform** — Para Infraestructura como Código  
-- **GitHub Actions** — Para CI/CD automatizado  
-- **Python** — Lógica de Cloud Function y DAG
+- **Terraform** — Infraestructura como código  
+- **GitHub Actions** — Automatización del CI/CD  
+- **Python** — Lógica de la Cloud Function y el DAG
 
 ---
 
-## 🚀 Despliegue en otros proyectos
+## 🚀 Despliegue en otro proyecto
 
-1. Clonar el repositorio y configurar credenciales GCP (Es necesario contar con una cuenta de servicio con los permisos necesarios para desplegar los servicios y guardarla como secreto con el nombre GCP_CREDS).
-2. Editar las variables de entorno del pipeline PROJECT_ID y REGION. Además teber en cuenta las variables en variables.tf de la raiz infrasctructure para evitar conflicto con el nombre de los buckets.
-3. Ejecutar los comandos de Terraform (Tener en cuenta que se deben tener habilitadas las API de GCS, Eventract, Cloud Functios, Composer):
+1. **Clonar este repositorio** y configurar las credenciales de GCP.  
+   Debes contar con una cuenta de servicio con permisos para desplegar recursos (Storage, Functions, Composer, etc.). Guarda el JSON como secreto en GitHub con el nombre `GCP_CREDS`.
+
+2. **Configurar variables de entorno**  
+   Edita las variables `PROJECT_ID` y `REGION` en los secretos o variables del pipeline. Además, revisa `variables.tf` para evitar conflictos con nombres de buckets o recursos.
+
+3. **Desplegar con Terraform**  
+   Asegúrate de que las siguientes APIs estén habilitadas: Cloud Storage, Eventarc, Cloud Functions, Cloud Composer, BigQuery.
+
    ```bash
    cd infrastructure
    terraform init
    terraform apply
-4. Para probar el despligue atomatico, se tendría que hacer un cambio en el DAG, en el código main de función o algun script dentro de infrastructure. 
-    ```bash
-   git add .
-   git commit -m"Prueba de despligue automatizado"
-   git push origin main
+4. **Probar despliegue automático**  
+   Realiza un cambio en alguno de los siguientes componentes para activar el pipeline CI/CD:
+   - Código del DAG (`composer/dags`)
+   - Código de la Cloud Function (`modules/cloud_function`)
+   - Infraestructura (`infrastructure`)
 
+   ⚠️ Cambios en `modules/cloud_storage/function.zip` no activarán el pipeline, ya que están ignorados por configuración.
+
+   ```bash
+   git add .
+   git commit -m "Prueba de despliegue automático"
+   git push origin main
 <img src="imagenes/despliegue.png" alt="Descripción" width="900">
 
-5. Para probar el flujo de los datos, se tendría que subir un archivo al bucket source y esperar a que se termine de ejecutar el dag para visualizar los datos transformados en bigquery.
+5. **Probar el flujo de procesamiento de datos**  
+   Sube el archivo `Telecom_Customers_Churn.csv` al bucket creado por Terraform. Esto inicia automáticamente el pipeline de procesamiento:
+
+   - ✅ La **Cloud Function** se activa al detectar la subida del archivo.
+   - 🚀 Lanza un **DAG en Cloud Composer**, pasándole los metadatos del evento.
+   - 📈 El **DAG ejecuta las siguientes tareas**:
+     - Verifica si el **dataset** en BigQuery existe; si no, lo crea.
+     - Carga el archivo CSV desde GCS a una tabla **temporal** en BigQuery, con todos los campos como `STRING`.
+     - Aplica una transformación SQL que **castea las columnas a sus tipos correctos** usando un esquema `.json` predefinido almacenado en GCS (también creado con la IaC).
+
+---

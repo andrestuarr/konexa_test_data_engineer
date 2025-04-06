@@ -1,97 +1,33 @@
-name: CI/CD for Feature Store Service
-
+name: Deploy Event Driven Architecture
 on:
   push:
     branches:
       - main
-    paths:
-      - "feature_store_service/**"
-      - "feast_ui/**"
-      - "infrastructure/service/**"
-
-permissions:
-  id-token: write
-  contents: read
+      - staging
 
 jobs:
-  build-and-deploy:
+  terraform:
     runs-on: ubuntu-latest
-    env:
-      TF_VAR_AWS_REGION: ${{ vars.AWS_REGION }}
-      TF_VAR_AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-      AWS_ROLE_GIT: ${{ secrets.AWS_ROL_GIT }}
-      AWS_ECR_REPO: ${{ vars.AWS_ECR_REPO }}
-      AWS_ECR_REPO_UI: ${{ vars.AWS_ECR_REPO_UI }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ env.TF_VAR_AWS_ACCOUNT_ID }}:role/${{ env.AWS_ROLE_GIT }}
-          aws-region: ${{ env.TF_VAR_AWS_REGION }}
+    - name: Set up Google Cloud credentials
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      - name: Print AWS environment variables
-        run: |
-          echo "AWS_REGION=${{ env.TF_VAR_AWS_REGION }}"
-          echo "AWS_ACCOUNT_ID=${{ env.TF_VAR_AWS_ACCOUNT_ID }}"
-          echo "AWS_ROLE_GIT=${{ env.AWS_ROLE_GIT }}"
-          echo "AWS_ECR_REPO=${{ env.AWS_ECR_REPO }}"
-          echo "AWS_ECR_REPO_UI=${{ env.AWS_ECR_REPO_UI }}"
-          echo "GITHUB_SHA=${{ github.sha }}"
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.3.0
 
-      - name: Debug AWS credentials
-        run: aws sts get-caller-identity
+    - name: Terraform Init
+      run: terraform init
 
-      - name: Login to AWS ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+    - name: Terraform Plan
+      run: terraform plan -out=tfplan
 
-      - name: Create ECR repository if not exists
-        run: |
-          aws ecr describe-repositories --repository-names $AWS_ECR_REPO || \
-          aws ecr create-repository --repository-name $AWS_ECR_REPO
-      
-      - name: Create ECR repository Feast UI if not exists
-        run: |
-          aws ecr describe-repositories --repository-names $AWS_ECR_REPO_UI || \
-          aws ecr create-repository --repository-name $AWS_ECR_REPO_UI
-
-      - name: Build Docker service image
-        run: |
-          docker build --platform linux/amd64 -t $AWS_ECR_REPO:latest -f feature_store_service/Dockerfile .
-          docker tag $AWS_ECR_REPO:latest $TF_VAR_AWS_ACCOUNT_ID.dkr.ecr.$TF_VAR_AWS_REGION.amazonaws.com/$AWS_ECR_REPO:latest
-
-      - name: Push Docker service image to ECR
-        run: |
-          docker push $TF_VAR_AWS_ACCOUNT_ID.dkr.ecr.$TF_VAR_AWS_REGION.amazonaws.com/$AWS_ECR_REPO:latest
-      
-      - name: Build Docker UI image
-        run: |
-          docker build --platform linux/amd64 -t $AWS_ECR_REPO_UI:latest -f feast_ui/Dockerfile .
-          docker tag $AWS_ECR_REPO_UI:latest $TF_VAR_AWS_ACCOUNT_ID.dkr.ecr.$TF_VAR_AWS_REGION.amazonaws.com/$AWS_ECR_REPO_UI:latest
-      
-      - name: Push Docker UI image
-        run: |
-          docker push $TF_VAR_AWS_ACCOUNT_ID.dkr.ecr.$TF_VAR_AWS_REGION.amazonaws.com/$AWS_ECR_REPO_UI:latest
-          
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.3.0
-
-      - name: Terraform Init
-        run: terraform init
-        working-directory: infrastructure/service/
-    
-      - name: Terraform Plan
-        run: terraform plan
-        working-directory: infrastructure/service/
-  
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-        working-directory: infrastructure/service/
-          
-
+    - name: Terraform Apply
+      run: terraform apply -auto-approve tfplan

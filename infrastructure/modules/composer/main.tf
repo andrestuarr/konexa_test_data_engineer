@@ -5,7 +5,7 @@ resource "google_composer_environment" "composer_env" {
 
   config {
     software_config {
-      image_version = "composer-3-airflow-2.5.0"
+      image_version = "composer-3-airflow-2.10.2"
       
       env_variables = {
         AIRFLOW_VAR_GCP_PROJECT = var.project_id

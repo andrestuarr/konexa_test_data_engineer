@@ -1,6 +1,7 @@
 from airflow import DAG
-from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateDatasetOperator, BigQueryInsertJobOperator
-from airflow.providers.google.cloud.operators.gcs import GCSToBigQueryOperator, GCSToLocalOperator
+from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator
+from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
+from airflow.providers.google.cloud.transfers.gcs import GCSToLocalOperator
 from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 from datetime import timedelta
@@ -20,17 +21,17 @@ dag = DAG(
     schedule_interval=None,
 )
 
-# Variables que se inyectan vía dag_run.conf
+# Variables inyectadas vía dag_run.conf
 bucket_name = '{{ dag_run.conf["bucket_name"] }}'
 file_name = '{{ dag_run.conf["file_name"] }}'
 project_id = os.environ.get("GCP_PROJECT")
 
-# Se generan variables para el nombre de la tabla y el nombre de la tabla transformada
+# Variables para el nombre de la tabla y la tabla transformada
 table_name = "{{ dag_run.conf['file_name'].split('/')[-1] }}"
 transform_table_name = "{{ dag_run.conf['file_name'].split('/')[-1] }}_transform"
 
-# Step 1. Asegura que exista el dataset en BigQuery.
-create_dataset = BigQueryCreateDatasetOperator(
+# Step 1: Asegura que exista el dataset en BigQuery.
+create_dataset = BigQueryCreateEmptyDatasetOperator(
     task_id='ensure_exist_dataset_raw',
     dataset_id=bucket_name,
     project_id=project_id,
@@ -39,7 +40,7 @@ create_dataset = BigQueryCreateDatasetOperator(
     dag=dag,
 )
 
-# Step 2. Cargar datos desde GCS a BigQuery.
+# Step 2: Cargar datos desde GCS a BigQuery.
 gcs_to_bq = GCSToBigQueryOperator(
     task_id='gcs_to_bq',
     bucket=bucket_name,
@@ -55,7 +56,7 @@ gcs_to_bq = GCSToBigQueryOperator(
     dag=dag,
 )
 
-# Step 3. Descargar el archivo SQL desde GCS.
+# Step 3: Descargar el archivo SQL desde GCS.
 download_sql_file = GCSToLocalOperator(
     task_id='download_sql_file',
     bucket_name='bucket-de-transformaciones',
@@ -65,7 +66,7 @@ download_sql_file = GCSToLocalOperator(
     dag=dag,
 )
 
-# Step 4. Leer el contenido del archivo SQL descargado.
+# Step 4: Leer el contenido del archivo SQL descargado.
 def read_sql_file(**kwargs):
     with open('/tmp/template_query.sql', 'r') as f:
         return f.read()
@@ -73,15 +74,16 @@ def read_sql_file(**kwargs):
 read_sql = PythonOperator(
     task_id='read_sql_file',
     python_callable=read_sql_file,
+    provide_context=True,
     dag=dag,
 )
 
-# Step 5. Ejecutar la transformación en BigQuery usando el contenido del archivo SQL.
+# Step 5: Ejecutar la transformación en BigQuery usando el contenido del archivo SQL.
 bq_transform = BigQueryInsertJobOperator(
     task_id='bq_transform',
     configuration={
         "query": {
-            "query": "{{ ti.xcom_pull(task_ids='read_sql_file') }}",
+            "query": "{{ task_instance.xcom_pull(task_ids='read_sql_file') }}",
             "useLegacySql": False,
             "destinationTable": {
                 "projectId": project_id,

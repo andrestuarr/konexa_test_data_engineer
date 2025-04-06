@@ -21,6 +21,7 @@ resource "google_cloudfunctions2_function" "cf_activate_dag" {
     environment_variables = {
       COMPOSER_ENV_NAME = var.composer_env_name
       COMPOSER_REGION = var.region
+      GCP_PROJECT = var.project_id
     }
 
     ingress_settings = "ALLOW_INTERNAL_ONLY"

@@ -35,7 +35,7 @@ module "cloud_functions" {
   project_id        = var.project_id
   region            = var.region
   function_name     = var.function_name
-  composer_env_name = module.composer.composer_airflow_uri
+  composer_env_name = var.composer_env_name
   trigger_bucket    = module.cloud_storage.bucket_name
   service_account   = module.iam.service_account_email
   bucket_functions  = module.cloud_storage.cloud_function_bucket_name

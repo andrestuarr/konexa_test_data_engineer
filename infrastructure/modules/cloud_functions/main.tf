@@ -4,8 +4,8 @@ resource "google_cloudfunctions2_function" "cf_activate_dag" {
   project  = var.project_id
 
   build_config {
-    runtime     = "custom"
-    entry_point = "trigger_dag"
+    runtime     = "python311"
+    entry_point = "gcs_trigger"
     source {
       storage_source {
         bucket = var.bucket_functions

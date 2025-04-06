@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    bucket = "terraform-bucket-konexa-ta"
+    bucket = "terraform-bucket-konexa-amta"
     prefix = "solutions/test" 
   }
 }

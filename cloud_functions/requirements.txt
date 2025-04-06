@@ -1,4 +1,4 @@
 google-cloud-storage
-google-cloud-composer
+google-auth
 requests
 functions-framework

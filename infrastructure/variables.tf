@@ -1,7 +1,7 @@
 variable "project_id" {
     description = "The ID of the project in which the resource belongs."
     type        = string
-    default     = "konexa-test-at"
+    default     = "konexa-amta-test"
 }
 
 variable "region" {
@@ -19,7 +19,7 @@ variable "sa_name" {
 variable "cloud_function_bucket_name" {
     description = "The name of the Cloud Storage bucket."
     type        = string
-    default     = "konexa-source-bucket-at"
+    default     = "konexa-cf-bucket-at"
 }
 
 variable "bucket_name" {
@@ -49,7 +49,7 @@ variable "composer_env_name" {
 variable "dag_file_name" {
     description = "The name of the DAG file to be uploaded."
     type        = string
-    default     = "dag_process_at.py"
+    default     = "dags/dag_process.py"
 }
 
 variable "dag_file" {

@@ -119,3 +119,57 @@ Se implementa una **arquitectura event-driven** (basada en eventos) que automati
      - Aplica una transformación SQL que **castea las columnas a sus tipos correctos** usando un esquema `.json` predefinido almacenado en GCS (también creado con la IaC).
 
 ---
+
+
+## 🎯 Pregunta 4:
+
+### a. Preguntas al área de negocio
+
+- ¿Cuál es la prioridad de atención entre los registros generados?
+- ¿Existe una ventana de tiempo límite para ejecutar las llamadas una vez generado el registro?
+- ¿Qué acciones deben tomarse en caso de fallos en la entrega (por ejemplo, reintentos, alertas, etc.)?
+- ¿Se necesita trazabilidad de cada llamada y su estado (éxito, error, reintento)?
+- ¿El volumen de registros puede aumentar en el futuro?
+
+### b. Preguntas al proveedor de la API
+
+- ¿Cuál es el mecanismo de autenticación requerido por la API?
+- ¿Existen restricciones adicionales (por IP, headers, horarios, etc.)?
+- ¿Qué tipos de errores puede devolver la API y cómo manejarlos adecuadamente?
+- ¿Existen cuotas diarias o límites mensuales además del límite por segundo?
+- ¿Soporta reintentos o debe manejarse completamente desde el cliente?
+
+## ⚙️ Arquitectura de la solución
+
+La siguiente arquitectura considera los requerimientos mencionados, con foco en control de tasa de solicitudes y procesamiento asincrónico confiable. Algunos componentes podrían ajustarse tras una revisión detallada con las áreas involucradas y el proveedor del servicio.
+
+<img src="imagenes/arquitectura_call_center.jpg" alt="Descripción" width="900">
+
+## 🧩 Componentes
+1. **Servicio Generador de Solicitudes de Llamada**
+Orquesta el procesamiento inicial de los registros generados cada hora y los envía a la cola de procesamiento.
+
+2. **Call Request Rate Control (Cloud Tasks)**
+Utiliza Cloud Tasks para garantizar que no se exceda el límite de 10 requests/segundo. Encola automáticamente las solicitudes y las despacha según la tasa permitida.
+
+3. **Call Center Worker (Cloud Run)**
+Servicio backend responsable de consumir tareas desde la cola y realizar las llamadas a través de la API. También almacena logs y estados de cada solicitud en Firestore para trazabilidad.
+
+4. **Webhook Receiver (Cloud Functions)**
+Punto de entrada para notificaciones asincrónicas de la API (por ejemplo, confirmación de llamada o resultados). Permite actualizar el estado en Firestore.
+
+5. Firestore
+Base de datos NoSQL utilizada para registrar logs de solicitudes, errores y estados de cada llamada, permitiendo seguimiento y auditoría.
+
+
+## ✅ Justificación de la arquitectura
+- **Escalabilidad automática**: El uso de servicios serverless como Cloud Run y Cloud Functions permite escalar según demanda sin intervención manual.
+
+- **Control de flujo robusto**: Cloud Tasks permite controlar de forma precisa la tasa de envío hacia la API, alineándose con las limitaciones del proveedor.
+
+- **Procesamiento resiliente y asincrónico**: El desacoplamiento de componentes garantiza tolerancia a fallos, reintentos y persistencia.
+
+- **Observabilidad**: Con Firestore como almacenamiento de estado, se puede consultar fácilmente el estado de cada llamada y aplicar dashboards o alertas si es necesario.
+
+- **Extensibilidad**: La arquitectura permite incluir nuevas fuentes de registros, diferentes mecanismos de notificación, o integrar servicios adicionales (por ejemplo, BigQuery para analítica posterior).
+

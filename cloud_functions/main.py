@@ -5,6 +5,7 @@ from google.auth.transport.requests import Request
 import os
 import logging
 import json
+from datetime import datetime
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +32,7 @@ def trigger_dag(dag_id: str, payload: dict):
         logger.info(f"Airflow URI obtenido: {airflow_uri}")
 
         dag_endpoint = f"{airflow_uri}/api/v1/dags/{dag_id}/dagRuns"
-        dag_run_id = f"triggered_{payload['file_name'].replace('/', '_')}"
+        dag_run_id = f"triggered_{payload['file_name'].replace('/', '_')}_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"
 
         body = {
             "dag_run_id": dag_run_id,

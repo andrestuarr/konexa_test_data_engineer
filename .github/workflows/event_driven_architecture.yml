@@ -16,7 +16,7 @@ jobs:
     - name: Set up Google Cloud credentials
       uses: google-github-actions/setup-gcloud@v2
       with:
-        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+        credentials_json: ${{ secrets.GCP_CREDS }}
 
     - name: Install Terraform
       uses: hashicorp/setup-terraform@v1
@@ -25,9 +25,12 @@ jobs:
 
     - name: Terraform Init
       run: terraform init
+      working-directory: infrastructure/
 
     - name: Terraform Plan
       run: terraform plan -out=tfplan
+      working-directory: infrastructure/
 
     - name: Terraform Apply
       run: terraform apply -auto-approve tfplan
+      working-directory: infrastructure/
